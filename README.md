@@ -97,7 +97,7 @@ uv sync
 uv run pytest -q
 ```
 
-Подключите навык, скопировав или связав `skills/book-translate` в каталог навыков агента (например, `~/.claude/skills/`), и запускайте агента из этого репозитория, чтобы работала команда `uv run bt`. Дальше достаточно попросить:
+Подключите навык, скопировав или связав `skills/book-translate` в каталог навыков агента (например, `~/.claude/skills/`). CLI запускается из любой папки: `uv run <каталог навыка>/bt.py`, зависимости uv поставит сам. Дальше достаточно попросить:
 
 > Переведи книгу `book.pdf` на русский, рабочая папка `work/mybook`.
 
@@ -106,7 +106,7 @@ uv run pytest -q
 ```bash
 export BT_TYPST=/path/to/typst
 export BT_FONTS=/path/to/fonts
-uv run bt build book.pdf --work work/mybook
+uv run skills/book-translate/bt.py build book.pdf --work work/mybook
 ```
 
 ## Что внутри

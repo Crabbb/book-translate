@@ -97,7 +97,7 @@ uv sync
 uv run pytest -q
 ```
 
-Copy or link `skills/book-translate` into your agent's skills directory (for example, `~/.claude/skills/`), and run the agent from this repository so that `uv run bt` works. Then ask:
+Copy or link `skills/book-translate` into your agent's skills directory (for example, `~/.claude/skills/`). The CLI runs from any folder: `uv run <skill folder>/bt.py`, and uv installs its dependencies. Then ask:
 
 > Translate `book.pdf` into Russian, working folder `work/mybook`.
 
@@ -106,7 +106,7 @@ The agent runs the process and asks you only when it cannot continue. To build, 
 ```bash
 export BT_TYPST=/path/to/typst
 export BT_FONTS=/path/to/fonts
-uv run bt build book.pdf --work work/mybook
+uv run skills/book-translate/bt.py build book.pdf --work work/mybook
 ```
 
 The skill's procedures are written in Russian, since its target language is Russian.
