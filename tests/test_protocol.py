@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
-from bt import batch, bible, qa, revision, store
+from bt import batch, bible, cli, qa, revision, store
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -900,3 +900,50 @@ def test_lost_first_person_of_the_author_is_found():
 
 def _unused(_: Path) -> None:
     """Path import is kept for fixtures typed by tmp_path users."""
+
+
+def test_gate_on_an_empty_selection_does_not_pass(ws, capsys):
+    assert qa.chapter_gate(ws, {9999}, "x")["verdict"] == "empty"
+    assert cli.main(["gate", "--work", str(ws.root), "--pages", "9000-9001"]) == 2
+    assert '"verdict": "empty"' in capsys.readouterr().out
+
+
+def test_passport_set_writes_valid_rules_and_refuses_unchecked_ones(ws, tmp_path, capsys):
+    good = tmp_path / "good.yaml"
+    good.write_text(
+        "passport: {function: instrumental}\n"
+        "rules:\n"
+        "- {id: R-1, status: active, do: x, check: {kind: pattern, pattern: '^A'}}\n"
+        "- {id: R-2, status: active, do: y, check: {kind: judgement_only, step: check}}\n",
+        encoding="utf-8",
+    )
+    assert cli.main(["passport-set", "--work", str(ws.root), "--file", str(good)]) == 0
+    assert len(ws.passport()["rules"]) == 2
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("passport: {}\nrules:\n- {id: R-3, status: active, do: z}\n", encoding="utf-8")
+    assert cli.main(["passport-set", "--work", str(ws.root), "--file", str(bad)]) == 2
+    assert "R-3" in capsys.readouterr().out
+    assert len(ws.passport()["rules"]) == 2
+
+
+def test_voice_set_writes_the_voice_file(ws, tmp_path):
+    f = tmp_path / "voice.yaml"
+    f.write_text("traits: [{id: V-01}]\n", encoding="utf-8")
+    assert cli.main(["voice-set", "--work", str(ws.root), "--file", str(f)]) == 0
+    assert ws.voice()["traits"][0]["id"] == "V-01"
+
+
+def test_hand_edited_rule_without_a_check_blocks_the_gate(ws):
+    store.write_atomic(
+        ws.bible / "passport.yaml",
+        "passport: {}\nrules:\n- {id: R-9, status: active, do: z}\n",
+    )
+    gate = qa.chapter_gate(ws, None, "x")
+    assert gate["verdict"] == "blocked"
+    assert any(b["rule"] == "R-9" for b in gate["blockers"])
+
+
+def test_missing_input_file_is_a_json_refusal(ws, tmp_path, capsys):
+    missing = tmp_path / "no.pdf"
+    assert cli.main(["ingest", str(missing), "--work", str(tmp_path / "w")]) == 2
+    assert '"ok": false' in capsys.readouterr().out

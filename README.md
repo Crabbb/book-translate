@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/Crabbb/book-translate/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Crabbb/book-translate/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-2a78d6">
-  <img alt="Tests: 172" src="https://img.shields.io/badge/tests-172-2a78d6">
+  <img alt="Tests: 177" src="https://img.shields.io/badge/tests-177-2a78d6">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-52514e"></a>
 </p>
 
@@ -119,7 +119,7 @@ skills/book-translate/
 ├── profiles/           профиль вёрстки издательства
 ├── templates/book.typ  шаблон сборки
 └── tools/bt/           CLI: ingest, bible, qa, cite, gate, typeset, artifact
-tests/                  172 теста
+tests/                  177 тестов
 evals/                  оценка вердиктов судьи
 ```
 

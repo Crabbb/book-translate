@@ -13,6 +13,7 @@
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # the skill folder stays exactly as it was installed
 sys.path.insert(0, str(Path(__file__).resolve().parent / "tools"))
 
 from bt.cli import main

@@ -548,6 +548,9 @@ def chapter_gate(
     accepted = ws.accepted()
     concepts, doc, voice, notes = ws.concepts(), ws.passport(), ws.voice(), ws.notes()
     selected = batch_mod._select(units, pages)
+    if not list(selected):
+        # Nothing was checked, so nothing passed: a mistyped chapter must not look green.
+        return {"verdict": "empty", "selected": 0, "reason": "no units in this selection"}
     state = batch_mod.status(ws, pages)
     dispositions = {r["key"]: r for r in read_jsonl(ws.reports / "dispositions.jsonl")}
     blockers: list[dict] = []
@@ -595,6 +598,8 @@ def chapter_gate(
                         blockers.append({"rule": step, "unit": unit["unit_id"], "detail": f})
         if lacking:
             missing_evidence[step] = lacking
+    for problem in bible_mod.rule_problems(doc.get("rules") or []):
+        blockers.append({"rule": problem["rule"], "unit": None, "detail": problem["problem"]})
     verdict = "pass"
     if (
         state["todo_count"]

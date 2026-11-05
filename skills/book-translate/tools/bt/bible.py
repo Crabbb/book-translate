@@ -151,6 +151,35 @@ def validate(concept: dict) -> None:
         raise BibleError(f"{concept['id']}: no preferred variant")
 
 
+def rule_problems(rules: list) -> list[dict]:
+    """An active rule without a usable check would look enforced while nothing checks it."""
+    problems = []
+    for rule in rules:
+        rid = rule.get("id") if isinstance(rule, dict) else None
+        if not rid or not isinstance(rule, dict):
+            problems.append({"rule": rid, "problem": "a rule needs an id"})
+            continue
+        if rule.get("status") != "active":
+            continue
+        if not rule.get("do"):
+            problems.append({"rule": rid, "problem": "an active rule needs `do`"})
+        check = rule.get("check") or {}
+        kind = check.get("kind")
+        if kind == "pattern":
+            try:
+                re.compile(check.get("pattern") or "")
+            except re.error as error:
+                problems.append({"rule": rid, "problem": f"bad pattern: {error}"})
+            if not check.get("pattern"):
+                problems.append({"rule": rid, "problem": "check.pattern is empty"})
+        elif kind == "judgement_only":
+            if check.get("step") not in ("check", "read-target"):
+                problems.append({"rule": rid, "problem": "check.step: check or read-target"})
+        else:
+            problems.append({"rule": rid, "problem": "check.kind: pattern or judgement_only"})
+    return problems
+
+
 def _complete_forms(concept: dict) -> None:
     for variant in concept["variants"]:
         if not variant.get("forms"):

@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+import yaml
+
 from . import batch, bible, indexer, ingest, qa, revision, store, typeset
 
 SKILL_DIR = Path(__file__).resolve().parents[2]
@@ -226,7 +228,36 @@ def cmd_decide(args) -> int:
 
 
 def cmd_gate(args) -> int:
-    return _emit({"ok": True, **qa.chapter_gate(_ws(args), _scope(args), args.name)})
+    result = qa.chapter_gate(_ws(args), _scope(args), args.name)
+    return _emit({"ok": result["verdict"] != "empty", **result})
+
+
+def _write_yaml(ws: store.Workspace, name: str, doc: dict) -> None:
+    text = yaml.safe_dump(doc, allow_unicode=True, sort_keys=False)
+    with ws.lock():
+        store.write_atomic(ws.bible / name, text)
+
+
+def cmd_passport_set(args) -> int:
+    doc = yaml.safe_load(Path(args.file).read_text("utf-8"))
+    if not isinstance(doc, dict) or not isinstance(doc.get("passport"), dict):
+        return _emit({"ok": False, "error": "the file needs a `passport` section"})
+    rules = doc.get("rules") or []
+    if not isinstance(rules, list):
+        return _emit({"ok": False, "error": "`rules` must be a list"})
+    problems = bible.rule_problems(rules)
+    if problems:
+        return _emit({"ok": False, "problems": problems})
+    _write_yaml(_ws(args), "passport.yaml", doc)
+    return _emit({"ok": True, "rules": len(rules)})
+
+
+def cmd_voice_set(args) -> int:
+    doc = yaml.safe_load(Path(args.file).read_text("utf-8"))
+    if not isinstance(doc, dict):
+        return _emit({"ok": False, "error": "voice must be a mapping"})
+    _write_yaml(_ws(args), "voice.yaml", doc)
+    return _emit({"ok": True})
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -296,8 +327,13 @@ def main(argv: list[str] | None = None) -> int:
     command("edit", cmd_edit, ("--step", {"required": True}), file)
     command("decide", cmd_decide, file)
     command("gate", cmd_gate, pages, chapter, ("--name", {"default": "book"}))
+    command("passport-set", cmd_passport_set, file)
+    command("voice-set", cmd_voice_set, file)
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (OSError, yaml.YAMLError) as error:
+        return _emit({"ok": False, "error": str(error)})
 
 
 if __name__ == "__main__":
