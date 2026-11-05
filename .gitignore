@@ -1,0 +1,13 @@
+# Приватный контекст проекта
+.project-context/
+# Книги и результаты перевода (авторские права): не коммитить
+books/
+work/
+# Служебное
+.codegraph/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/

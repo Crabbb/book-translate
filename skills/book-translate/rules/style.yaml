@@ -1,0 +1,198 @@
+# Style lint. Findings are checked against the aligned source: a device mirrored from the
+# author is only a suggestion (spec 8.3). Not a quality gate: see references/edit.md.
+- id: CHAT-01
+  mode: direct
+  sev: critical
+  re: \bконечно!|\bотличный вопрос|\bрад помочь|\bнадеюсь,? (?:это|что это)\b[^.!?\n]{0,20}полезн|\bдавайте разбер[её]мся|\bхотите,? чтобы я\b|\bесли нужно,? (?:я )?могу\b
+- id: CHAT-02
+  mode: direct
+  sev: critical
+  re: :contentReference|oai_citation|oaicite|utm_source=(?:chatgpt|openai)|turn\d+(?:search|fetch|file)\d+|citeturn|【\d+|</?think>|\[citation:\d+\]
+- id: TYPO-07
+  mode: direct
+  sev: major
+  re: (?<=[а-яё])[a-z](?=[а-яё])
+- id: TYPO-08
+  mode: direct
+  sev: minor
+  re: '[\u200b\u200c\u200d\ufeff\u2060\u200e\u200f]'
+- id: GOV-01
+  mode: direct
+  sev: major
+  re: \bпо окончанию\b|\bпо приезду\b|\bв течении (?:года|месяца|дня|недели|часа|времени)|\bиметь ввиду\b|\bне смотря на\b
+- id: TYPO-02
+  mode: direct
+  sev: minor
+  re: '[а-яё] - [а-яё]'
+- id: TYPO-03
+  mode: direct
+  sev: minor
+  re: '[а-яё] -- [а-яё]'
+- id: TYPO-04
+  mode: direct
+  sev: minor
+  re: '[а-яё]\.\.\.'
+- id: TYPO-01
+  mode: direct
+  sev: minor
+  re: (?<![\w=])"[А-Яа-яЁё]
+- id: TYPO-10
+  mode: direct
+  sev: minor
+  re: '[“”]'
+  en: '[“”]'
+- id: TYPO-05
+  mode: candidate
+  sev: major
+  re: \b\d{1,3},\d{3},\d{3}\b
+- id: CALQ-01
+  mode: direct
+  sev: major
+  re: \bадресова\w+\s+(?:проблем|вопрос|задач)\w*|\bдостав\w+\s+ценност\w*|\bна (?:ежедневной|регулярной|ежемесячной) основе\b|\bсдела\w+ разницу\b|\bв конце дня\b|\bна одной странице с\b|\bимплементир\w+|\bвстрети\w+
+    дедлайн\w*|\bделает смысл\b
+  en: address|deliver.*value|daily basis|regular basis|make a difference|end of the day|same page|implement|meet.*deadline|makes sense
+- id: STAMP-01
+  mode: candidate
+  sev: major
+  re: \bв современном (?:динамичн\w+ )?мире\b|\bв эпоху\b|\b(?:ни для кого )?не секрет,? что\b|\bв быстро меняющемся\b
+  en: in today's|modern world|in (?:the|an) era|in (?:the|an) age|no secret|fast-changing|rapidly
+- id: STAMP-02
+  mode: candidate
+  sev: major
+  re: \b(?:стоит|важно|следует|необходимо|нужно) (?:отметить|подчеркнуть|упомянуть|помнить|понимать)\b|\bнельзя не (?:отметить|упомянуть)\b
+  en: worth (?:noting|mentioning)|important to|should note|keep in mind|note that|remember|need(?:s)? to
+- id: STAMP-03
+  mode: candidate
+  sev: major
+  re: \bигра(?:ет|ют|ть|л|ла|ли)\s+(?:\w+\s+)?(?:важн|ключев|решающ|значим|центральн|огромн)\w+\s+роль\b
+  en: role|crucial|vital|key
+- id: STAMP-04
+  mode: candidate
+  sev: major
+  re: \bраскры(?:ть|ва\w+)\s+(?:\w+\s+)?потенциал|\bвыв(?:ести|одит|одят)\s+на\s+новый\s+уровень|\bоткрыва(?:ет|ют)\s+новые\s+(?:горизонт|перспектив|возможност)|\bпогруз(?:имся|итесь)\b|\bпроклады\w+ путь\b
+  en: unlock|potential|next level|new (?:horizons|possibilities|opportunities)|dive|pave the way
+- id: STAMP-06
+  mode: candidate
+  sev: minor
+  re: \bне просто\b[^.!?\n]{1,40}?\bа\b|\bне только\b[^.!?\n]{1,50}?\bно и\b
+  en: not (?:just|only|simply|merely)
+- id: STAMP-07
+  mode: candidate
+  sev: minor
+  re: \bэто не [^.!?\n]{1,40}[,—:]\s*(?:а|это)\b
+  en: isn't|is not|not .* but
+- id: STAMP-08
+  mode: candidate
+  sev: major
+  re: \bбез воды\b|\bбез прикрас\b|\bчестн\w+ (?:разбор|список)|\bбуду (?:с вами )?откровен|\bрасскажу как есть\b|\bразлож\w+ по полочкам\b
+  en: honest|frank|straight|no fluff|no-nonsense
+- id: STAMP-09
+  mode: candidate
+  sev: minor
+  re: \bчто дела(?:ет|ют) (?:его|её|ее|их|это|эту|этот)\b
+  en: making|which makes
+- id: STAMP-10
+  mode: candidate
+  sev: minor
+  re: \bподч[её]ркива\w+ важност|\bважн\w+ шаг\w*
+  en: underscor|highlight|emphasi|important step
+- id: STAMP-11
+  mode: candidate
+  sev: minor
+  re: \b(?:различн\w+|ряд\w*|многи\w+|определ[её]нн\w+) (?:фактор|аспект|нюанс|особенност)\w*|\bсвои особенности\b|\bсвоя специфика\b
+  en: various|several|certain|many|factors|aspects
+- id: STAMP-12
+  mode: candidate
+  sev: minor
+  re: \bисследования показывают\b|\bэксперты (?:отмечают|считают)\b|\bучёные доказали\b|\bпо мнению экспертов\b
+  en: studies|research|experts|scientists
+- id: STAMP-13
+  mode: candidate
+  sev: major
+  re: (?:^|[.!?\n]\s*)(?:без|ни)\s+[^.!?\n]{1,40}[.!?]\s+(?:без|ни)\s+[^.!?\n]{1,40}[.!?]\s+(?:только|просто|лишь)\b
+  en: \bno\b.*\bno\b.*\bjust\b
+- id: KANC-01
+  mode: candidate
+  sev: minor
+  re: \bосуществл\w+
+- id: KANC-02
+  mode: candidate
+  sev: minor
+  re: \b(?:произв(?:ести|одить|одит|одится)|оказ(?:ать|ывать|ывает|ывают)|приня(?:ть|л|ла|ли)|приним(?:ать|ает|ают))\s+(?:оплат|ремонт|влияни|содействи|участи|воздействи|решени)\w*|\bиме(?:ет|ют|ть)\s+место\b
+- id: KANC-03
+  mode: candidate
+  sev: minor
+  re: \bв настоящее время\b|\bна сегодняшний день\b|\bна данный момент\b|\bв данный момент\b|\bв целях\b|\bв случае,? если\b|\bв связи с тем,? что\b|\bпо причине того,? что\b|\bввиду того,? что\b|\bпредставляется
+    возможным\b|\bвышеуказанн\w+|\bнижеследующ\w+|\bна постоянной основе\b
+- id: KANC-04
+  mode: candidate
+  sev: minor
+  re: \bданн(?:ый|ая|ое|ого|ой|ом|ую)\b
+- id: KANC-07
+  mode: candidate
+  sev: suggestion
+  re: \bв рамках\b
+- id: KANC-08
+  mode: candidate
+  sev: suggestion
+  re: \bпосредством\b
+- id: KANC-05
+  mode: metric
+  re: \bявля(?:ется|ются|лся|лась|лось|лись|ющ\w+)\b
+- id: KANC-06
+  mode: metric
+  re: \bпредставля(?:ет|ют) собой\b
+- id: CALQ-08
+  mode: metric
+  re: \bваш(?:|а|е|и|его|ей|ему|им|ем|у|их|ими)\b
+  en: \byour\b
+- id: CALQ-02
+  mode: metric
+  re: \b(?:может|могут)\s+быть\s+[а-яё]+(?:н|т|на|та|но|то|ны|ты|ен|ена|ено|ены)\b
+  en: \b(?:can|may) be\b
+- id: CALQ-03
+  mode: metric
+  re: ',\s*что\s+позволя\w+'
+  en: which (?:allows|enables)|allowing|enabling
+- id: CALQ-06
+  mode: metric
+  re: ',\s*так(?:ие|их|им|ими)\s+как\b'
+  en: such as
+- id: CALQ-07
+  mode: metric
+  re: \bоснован\w*\s+на\b
+  en: based on
+- id: CALQ-16
+  mode: metric
+  re: \bкотор\w+[^.!?\n]{1,60}\bкотор\w+
+- id: LEN-01
+  mode: metric
+  re: предложение > 30 слов
+- id: PUNC-01
+  mode: candidate
+  sev: minor
+  re: (?:^|[.!?]\s+)однако,
+- id: PUNC-02
+  mode: candidate
+  sev: minor
+  re: '(?-i:[а-яё]{3,}): (?-i:[А-ЯЁ][а-яё]+)'
+  skip_regions:
+  - figure_text
+  - alt
+  - caption
+  - index
+- id: TYPO-06
+  mode: candidate
+  sev: minor
+  re: (?<![\d.\w-])\d+\.\d+(?![\d.]|\w)
+  skip_regions:
+  - caption
+  - figure_text
+  - alt
+  - heading
+  - index
+- id: PLEO-01
+  mode: candidate
+  sev: suggestion
+  re: \bпериод времени\b|\bглавн\w+ приоритет\w*|\bсам\w+ оптимальн\w+|\bнаиболее оптимальн\w+|\bдруг\w+ альтернатив\w+|\bответн\w+ реакци\w+|\bкратк\w+ резюме\b|\bпредварительн\w+ планировани\w+|\bсовместн\w+
+    сотрудничеств\w+

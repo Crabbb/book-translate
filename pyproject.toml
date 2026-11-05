@@ -1,0 +1,33 @@
+[project]
+name = "book-translate"
+version = "0.1.0"
+description = "Deterministic tools for the book-translate skill"
+requires-python = ">=3.11"
+dependencies = [
+    "pikepdf==10.*",
+    "pdfplumber==0.11.*",
+    "pypdfium2==4.*",
+    "pyyaml==6.*",
+    "pymorphy3==2.*",
+]
+
+[project.scripts]
+bt = "bt.cli:main"
+
+[dependency-groups]
+dev = ["pytest==8.*", "hypothesis==6.*", "ruff==0.*"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["skills/book-translate/tools/bt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["skills/book-translate/tools"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

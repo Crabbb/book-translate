@@ -1,0 +1,47 @@
+# Publisher profile: how InDesign paragraph styles map to logical regions.
+# A style missing here stops ingest: nothing is silently treated as plain text.
+styles:
+  /P_-_Regular: {region: body}
+  /P_-_Quote: {region: quote}
+  /IMG_-_Figure: {region: body}          # mis-applied style on prose in this book, recorded as anomaly
+  /L_-_Bullets: {region: list, level: 1, marker: bullet}
+  /L_-_Bullets_copy: {region: list, level: 1, marker: bullet}
+  /L2_-_Bullets: {region: list, level: 2, marker: bullet}
+  /L_-_Numbers: {region: list, level: 1, marker: number}
+  /L_-_Regular: {region: list, level: 1, marker: none}
+  /LBody: {region: list, level: 1, marker: none}
+  /P_-_Callout_Heading: {region: note_title}
+  /P_-_Callout: {region: note}
+  /SC_-_Source: {region: code}
+  /P_-_Source: {region: code, bold: true}
+  /IMG_-_Caption: {region: caption}
+  /H0_-_Number: {region: chapter_no}
+  /H1_-_Chapter: {region: heading, level: 1}
+  /H1_-_Chapter_TOC: {region: toc}
+  /H1_-_Section: {region: heading, level: 2}
+  /H2_-_Heading: {region: heading, level: 3}
+  /H3_-_Subheading: {region: heading, level: 4}
+  /H4_-_Subheading: {region: heading, level: 5}
+  /HX_-_Book_Title: {region: title}
+  /HX_-_Book_Subtitle: {region: subtitle}
+  /HX_-_Book_Author: {region: author}
+  /TOCI: {region: toc}
+  /Figure: {region: figure}
+
+ancestors:
+  /Index: index                          # any block under /Index is an index entry
+  /TOC: toc
+
+part_title: '^Part \d+:'
+
+fonts:
+  mono: Courier
+  bold: [Bold, Semibold]
+  italic: [It]
+  symbol: [Wingdings]
+
+zones:
+  running_head_bottom: 60                 # untagged text above this line is a running head
+  footer_top: 620
+  code_column_pt: 5.4                    # Courier 9 pt glyph width
+  odd_page_shift: 9                      # trim boxes of odd pages are offset in this book
