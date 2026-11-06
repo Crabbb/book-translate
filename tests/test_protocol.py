@@ -303,7 +303,7 @@ def passport(ws, modal="могут"):
                         "zones": ["body"],
                         "when": "обращение",
                         "do": "на вы",
-                        "check": {"kind": "lint"},
+                        "check": {"kind": "judgement_only", "step": "check"},
                         "examples": {"good": ["пример"]},
                     }
                 ],
@@ -337,7 +337,7 @@ def test_rule_check_change_drops_evidence_but_keeps_the_translation(ws):
     before = qa.chapter_gate(ws, None, "t")["missing_evidence"]
     assert before == {}
     doc = ws.passport()
-    doc["rules"][0]["check"] = {"kind": "aligned_llm"}
+    doc["rules"][0]["check"] = {"kind": "judgement_only", "step": "read-target"}
     store.write_atomic(ws.bible / "passport.yaml", json.dumps(doc, ensure_ascii=False))
     assert batch.status(ws)["stale_count"] == 0
     assert qa.chapter_gate(ws, None, "t")["missing_evidence"] == {"check": 2, "read-target": 2}
@@ -687,7 +687,10 @@ def test_candidates_find_planted_errors(src, tgt, rule):
             "Teams often need to ensure backups.",
             "Командам часто приходится обеспечивать резервные копии.",
         ),
-        ("Parsers were, thus, limited in speed.", "Таким образом, парсеры были ограничены по скорости."),
+        (
+            "Parsers were, thus, limited in speed.",
+            "Таким образом, парсеры были ограничены по скорости.",
+        ),
         ("Unable to draw charts as of 2024.", "На 2024 год не умеет рисовать графики."),
     ],
 )
@@ -791,9 +794,7 @@ def test_kept_prompt_must_stay_word_for_word():
     good = qa.check_unit(
         u, {"tgt": "Summarize this report.¶Кратко изложи этот отчёт.", "terms": []}, {}, []
     )
-    bad = qa.check_unit(
-        u, {"tgt": "Summarize.¶Кратко изложи этот отчёт.", "terms": []}, {}, []
-    )
+    bad = qa.check_unit(u, {"tgt": "Summarize.¶Кратко изложи этот отчёт.", "terms": []}, {}, [])
     assert "P2" not in {f["rule"] for f in good}
     assert "P2" in {f["rule"] for f in bad}
 
@@ -947,3 +948,67 @@ def test_missing_input_file_is_a_json_refusal(ws, tmp_path, capsys):
     missing = tmp_path / "no.pdf"
     assert cli.main(["ingest", str(missing), "--work", str(tmp_path / "w")]) == 2
     assert '"ok": false' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("rules", [None, False, 0, "", {}, "pattern"])
+def test_passport_set_refuses_non_list_rules_without_writing(ws, tmp_path, capsys, rules):
+    target = ws.bible / "passport.yaml"
+    store.write_atomic(target, "passport: {}\nrules: []\n")
+    before = target.read_bytes()
+    source = tmp_path / "passport-input.yaml"
+    source.write_text(json.dumps({"passport": {}, "rules": rules}), encoding="utf-8")
+    assert cli.main(["passport-set", "--work", str(ws.root), "--file", str(source)]) == 2
+    assert json.loads(capsys.readouterr().out)["ok"] is False
+    assert target.read_bytes() == before
+
+
+@pytest.mark.parametrize("doc", [{"passport": {}}, {"passport": {}, "rules": []}])
+def test_passport_set_supports_empty_rules_and_subsequent_gate(ws, tmp_path, doc):
+    source = tmp_path / "passport-input.yaml"
+    source.write_text(json.dumps(doc), encoding="utf-8")
+    assert cli.main(["passport-set", "--work", str(ws.root), "--file", str(source)]) == 0
+    assert ws.passport().get("rules", []) == []
+    accepted_ws(ws)
+    passes(ws)
+    assert qa.chapter_gate(ws, None, "empty-rules")["verdict"] == "pass"
+
+
+@pytest.mark.parametrize(
+    "check",
+    ["pattern", False, {"kind": "pattern", "pattern": 12}, {"kind": "pattern", "pattern": "["}],
+)
+def test_passport_set_refuses_invalid_checks_without_writing(ws, tmp_path, capsys, check):
+    target = ws.bible / "passport.yaml"
+    store.write_atomic(target, "passport: {}\nrules: []\n")
+    before = target.read_bytes()
+    source = tmp_path / "passport-input.yaml"
+    rule = {"id": "R-bad", "status": "active", "do": "validate", "check": check}
+    source.write_text(json.dumps({"passport": {}, "rules": [rule]}), encoding="utf-8")
+    assert cli.main(["passport-set", "--work", str(ws.root), "--file", str(source)]) == 2
+    refusal = json.loads(capsys.readouterr().out)
+    assert refusal["ok"] is False
+    assert any(p["rule"] == "R-bad" for p in refusal["problems"])
+    assert target.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    "rules",
+    [None, False, 0, "", {}, ["bad-rule"]]
+    + [
+        [{"id": "R-bad", "status": "active", "do": "validate", "check": check}]
+        for check in [
+            "pattern",
+            {"kind": "pattern", "pattern": 12},
+            {"kind": "pattern", "pattern": "["},
+        ]
+    ],
+)
+def test_hand_edited_invalid_rules_block_qa_and_gate(ws, capsys, rules):
+    accepted_ws(ws)
+    store.write_atomic(ws.bible / "passport.yaml", json.dumps({"passport": {}, "rules": rules}))
+    assert cli.main(["qa", "--work", str(ws.root)]) == 2
+    assert json.loads(capsys.readouterr().out)["ok"] is False
+    assert cli.main(["gate", "--work", str(ws.root)]) == 0
+    gate = json.loads(capsys.readouterr().out)
+    assert gate["verdict"] == "blocked"
+    assert gate["blocker_count"] >= 1

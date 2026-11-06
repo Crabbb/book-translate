@@ -153,6 +153,8 @@ def validate(concept: dict) -> None:
 
 def rule_problems(rules: list) -> list[dict]:
     """An active rule without a usable check would look enforced while nothing checks it."""
+    if not isinstance(rules, list):
+        return [{"rule": None, "problem": "`rules` must be a list"}]
     problems = []
     for rule in rules:
         rid = rule.get("id") if isinstance(rule, dict) else None
@@ -163,15 +165,20 @@ def rule_problems(rules: list) -> list[dict]:
             continue
         if not rule.get("do"):
             problems.append({"rule": rid, "problem": "an active rule needs `do`"})
-        check = rule.get("check") or {}
+        check = rule.get("check")
+        if not isinstance(check, dict):
+            problems.append({"rule": rid, "problem": "check must be a mapping"})
+            continue
         kind = check.get("kind")
         if kind == "pattern":
+            pattern = check.get("pattern")
+            if not isinstance(pattern, str) or not pattern.strip():
+                problems.append({"rule": rid, "problem": "check.pattern must be a nonempty string"})
+                continue
             try:
-                re.compile(check.get("pattern") or "")
+                re.compile(pattern)
             except re.error as error:
                 problems.append({"rule": rid, "problem": f"bad pattern: {error}"})
-            if not check.get("pattern"):
-                problems.append({"rule": rid, "problem": "check.pattern is empty"})
         elif kind == "judgement_only":
             if check.get("step") not in ("check", "read-target"):
                 problems.append({"rule": rid, "problem": "check.step: check or read-target"})

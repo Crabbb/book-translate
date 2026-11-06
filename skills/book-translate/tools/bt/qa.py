@@ -339,8 +339,12 @@ def run_qa(ws: Workspace, pages: set[int] | None, name: str) -> dict:
     accepted = ws.accepted()
     concepts = ws.concepts()
     rules = load_style_rules()
-    book_rules = [r for r in ws.passport().get("rules", []) if r.get("status") == "active"]
     doc, voice, notes = ws.passport(), ws.voice(), ws.notes()
+    problems = bible_mod.rule_problems(doc.get("rules", []))
+    # Validate before applying any rule, including passports edited outside the CLI.
+    if problems:
+        raise bible_mod.BibleError(json.dumps(problems, ensure_ascii=False))
+    book_rules = [r for r in doc.get("rules", []) if r.get("status") == "active"]
     selected = list(batch_mod._select(units, pages))
     findings: list[dict] = []
     hashes: dict[str, str] = {}
@@ -542,6 +546,15 @@ def chapter_gate(
     ws: Workspace, pages: set[int] | None, name: str, steps=("check", "read-target")
 ) -> dict:
     """pass, blocked, or a list of what is missing. Recomputed from files, never from a stored flag."""
+    problems = bible_mod.rule_problems(ws.passport().get("rules", []))
+    if problems:
+        return {
+            "verdict": "blocked",
+            "blockers": [
+                {"rule": p["rule"], "unit": None, "detail": p["problem"]} for p in problems
+            ],
+            "blocker_count": len(problems),
+        }
     run_qa(ws, pages, name)
     report = json.loads((ws.reports / f"qa-{name}.json").read_text("utf-8"))
     units = ws.units()
@@ -598,8 +611,6 @@ def chapter_gate(
                         blockers.append({"rule": step, "unit": unit["unit_id"], "detail": f})
         if lacking:
             missing_evidence[step] = lacking
-    for problem in bible_mod.rule_problems(doc.get("rules") or []):
-        blockers.append({"rule": problem["rule"], "unit": None, "detail": problem["problem"]})
     verdict = "pass"
     if (
         state["todo_count"]

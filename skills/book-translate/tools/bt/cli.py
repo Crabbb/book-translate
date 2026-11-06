@@ -242,7 +242,7 @@ def cmd_passport_set(args) -> int:
     doc = yaml.safe_load(Path(args.file).read_text("utf-8"))
     if not isinstance(doc, dict) or not isinstance(doc.get("passport"), dict):
         return _emit({"ok": False, "error": "the file needs a `passport` section"})
-    rules = doc.get("rules") or []
+    rules = doc.get("rules", [])
     if not isinstance(rules, list):
         return _emit({"ok": False, "error": "`rules` must be a list"})
     problems = bible.rule_problems(rules)
@@ -332,7 +332,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (OSError, yaml.YAMLError) as error:
+    except (OSError, yaml.YAMLError, bible.BibleError) as error:
         return _emit({"ok": False, "error": str(error)})
 
 
