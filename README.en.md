@@ -14,7 +14,7 @@
 
 Anyone can tell a model "translate this book". What comes back is smooth text where terms drift between chapters, the author's recommendations have become orders, and the layout, figures and index are gone.
 
-**book-translate** works like an editorial office, not a prompt. It is a skill for LLM agents (Claude Code, Codex and others) plus a CLI, `bt`. Together they take a technical book from English to Russian along the path a good publisher uses: preparation, a terminology glossary, translation, checking against the source, editing, independent review, typesetting.
+**book-translate** works like an editorial office, not a prompt. It is a skill for LLM agents (Claude Code, Codex and others) plus a CLI, `bt`. Together they take a technical book or a work of fiction from English to Russian along the path a good publisher uses: preparation, a terminology glossary, translation, checking against the source, editing, independent review, typesetting.
 
 The model is the translator here, not the whole process. Whatever code can check, code checks. Whatever needs understanding, the agent decides, and it records the reason.
 
@@ -24,7 +24,7 @@ The model is the translator here, not the whole process. Whatever code can check
 |---|---|---|---|
 | One terminology across the book | no | manual glossary | **living glossary with reasons and case forms** |
 | Context and the author's voice | within a window | within a phrase | **reads the whole book before translating** |
-| Nothing lost, nothing invented | can't verify | can't verify | **accounts for every PDF glyph** |
+| Nothing lost, nothing invented | can't verify | can't verify | **accounts for every PDF glyph or translatable EPUB node** |
 | Layout, tables, links, index | lost | partly | **rebuilt in the same design** |
 | Text inside figures | stays English | stays English | **translated under the caption** |
 | Prompts and code in books about LLMs | may run as instructions | break | **code untouched, prompt kept next to its translation** |
@@ -55,9 +55,9 @@ A translator systematically misses its own errors, and that holds for a model as
 
 ## How a book goes through
 
-<p align="center"><img src="docs/assets/pipeline-en.svg" alt="Diagram: brief, PDF ingest, analysis, glossary; per chapter translate, check, edit, read, recheck, gate and judge; then cross-chapter pass, index and build" width="100%"></p>
+The agent reads the entire book and prepares a glossary. For fiction it records chronology, characters, points of view, voices and forms of address. It consults sources when historical or cultural references affect meaning.
 
-A chapter is not done because it feels done. The gate recomputes its state from files: untranslated units, stale evidence, open questions. State lives on disk, so work survives a dropped session.
+The agent then writes the book's plan and acceptance criteria, creates an active goal in the host and reads it back. The [managed workflow](skills/book-translate/references/workflow.md) opens translation only after these steps. Final acceptance for fiction EPUB requires [AC-01–AC-09](skills/book-translate/references/fiction-epub-acceptance.md). State is saved on disk.
 
 ## A living glossary, not a list at the front
 
@@ -75,32 +75,32 @@ Only this book's glossary defines a term. If a decision changes on page 200, cod
 
 ## Quick start
 
-You need [uv](https://docs.astral.sh/uv/), [Typst 0.15.1](https://github.com/typst/typst/releases) and the fonts Libertinus Serif, Source Sans 3 and Liberation Mono.
+Install [uv](https://docs.astral.sh/uv/) and use an agent whose host provides `create_goal` and `get_goal`.
 
 ```bash
 git clone https://github.com/Crabbb/book-translate.git
-cp -r book-translate/skills/book-translate ~/.claude/skills/
+cd book-translate
+uv sync --locked
 ```
 
-Then ask your agent:
+Open the repository in the agent and ask:
 
-> Translate `book.pdf` into Russian, working folder `work/mybook`.
+> Translate `book.epub` from English into Russian using `skills/book-translate/SKILL.md`. Use `work/mybook` as the working folder.
 
-The agent runs the process and asks you only when it cannot continue. The CLI runs from any folder, and uv installs its dependencies:
+You can also start the CLI workflow and inspect its state:
 
 ```bash
-export BT_TYPST=/path/to/typst
-export BT_FONTS=/path/to/fonts
-uv run ~/.claude/skills/book-translate/bt.py build book.pdf --work work/mybook
+uv run --locked bt workflow-start book.epub --work work/mybook
+uv run --locked bt status --work work/mybook
 ```
 
-The skill's procedures are written in Russian, since its target language is Russian.
+The skill's procedures are written in Russian, its target language.
 
 ## What to know up front
 
-- Direction: English → Russian. Source: a tagged PDF. A new publisher needs its own layout profile.
-- The book is read in full several times, which costs real tokens and time. Quality here is not free.
-- The independent judge needs an environment where an agent can start another agent. Without it the other layers still work, but more meaning errors remain.
+- For reflowable EPUB 3, set `BT_EPUBCHECK` to a local EPUBCheck executable or JAR. Add `--pilot-chapter N --pilot-scene M` to `workflow-start` to try one scene. [EPUB details](skills/book-translate/references/epub.md)
+- Tagged PDF requires a layout profile, Typst and fonts. Set the paths with `BT_TYPST` and `BT_FONTS`. [PDF build](skills/book-translate/references/build.md)
+- If the host lacks goal tools, the workflow pauses at `goal` with preparation saved. Independent review requires a separate agent.
 
 ## What's inside
 

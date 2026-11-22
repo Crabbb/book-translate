@@ -2,6 +2,8 @@
 
 Перед началом составь паспорт и запиши его: `bt passport-set --work <папка> --file <файл.yaml>`. Это короткое описание задачи перевода, а не пересказ книги. Команда отклонит активное правило без рабочей проверки.
 
+Для нового EPUB выбери `passport.source.genre` в брифе. Значение `fiction` включает [обязательную приёмку художественного EPUB](fiction-epub-acceptance.md), для остальных книг используй `nonfiction` или `technical_book`.
+
 ```yaml
 passport:
   source: {audience: "...", purpose: "...", genre: technical_book, domain: [cloud, llm]}

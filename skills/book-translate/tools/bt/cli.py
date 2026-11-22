@@ -6,10 +6,11 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from zipfile import BadZipFile
 
 import yaml
 
-from . import batch, bible, indexer, ingest, qa, revision, store, typeset
+from . import batch, bible, epub, indexer, ingest, qa, revision, store, typeset, workflow
 
 SKILL_DIR = Path(__file__).resolve().parents[2]
 
@@ -18,6 +19,13 @@ def _emit(payload: dict) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print(json.dumps(payload, ensure_ascii=False, indent=1))
     return 0 if payload.get("ok", True) else 2
+
+
+def _emit_observed(args, payload: dict) -> int:
+    route = getattr(args, "route", None)
+    if route is not None and payload.get("ok", True):
+        route.observe(args)
+    return _emit(payload)
 
 
 def _pages(value: str | None) -> set[int] | None:
@@ -32,6 +40,9 @@ def _pages(value: str | None) -> set[int] | None:
 
 
 def _scope(args) -> set[int] | None:
+    route = getattr(args, "route", None)
+    if route is not None and route.pilot and not args.pages:
+        return route.scope(args.chapter)
     if args.chapter is not None:
         return batch.Chapters({args.chapter})
     return _pages(args.pages)
@@ -46,29 +57,42 @@ def _read(path: str):
 
 
 def cmd_ingest(args) -> int:
+    if Path(args.pdf).suffix.lower() == ".epub":
+        if args.profile:
+            return _emit({"ok": False, "error": "EPUB does not use a PDF layout profile"})
+        return _emit_observed(args, {"ok": True, **epub.ingest(Path(args.pdf), _ws(args))})
     profile = Path(args.profile) if args.profile else SKILL_DIR / "profiles" / "packt-indesign.yaml"
     try:
-        return _emit(
-            {"ok": True, **ingest.BookIngest(Path(args.pdf), Path(args.work), profile).run()}
+        return _emit_observed(
+            args, {"ok": True, **ingest.BookIngest(Path(args.pdf), Path(args.work), profile).run()}
         )
     except ingest.IngestError as error:
         return _emit({"ok": False, "error": str(error)})
 
 
 def cmd_build(args) -> int:
+    if Path(args.pdf).suffix.lower() == ".epub":
+        if args.pages:
+            return _emit({"ok": False, "error": "EPUB output preserves the full container"})
+        scope = args.route.scope() if getattr(args, "route", None) and args.route.pilot else None
+        result = epub.build(
+            Path(args.pdf), _ws(args), args.lang, args.draft, args.name, scope=scope
+        )
+        return _emit_observed(args, {"ok": True, **result})
     ws = _ws(args)
     setter = typeset.Typesetter(ws.root, lang=args.lang)
     typeset.extract_figures(Path(args.pdf), setter.objects, ws.ir / "figures")
     pages = _pages(args.pages)
     select = (lambda u: u["page"] in pages) if pages else None
     try:
-        return _emit(
+        return _emit_observed(
+            args,
             {
                 "ok": True,
                 **typeset.compile_book(
                     ws.root, setter.generate(select, draft=args.draft), args.name
                 ),
-            }
+            },
         )
     except typeset.BuildError as error:
         return _emit({"ok": False, "error": str(error)})
@@ -181,7 +205,7 @@ def cmd_cite(args) -> int:
         store.write_atomic(out, json.dumps(report["result"], ensure_ascii=False, indent=1))
         report["written"] = str(out)
     report.pop("result")
-    return _emit(report)
+    return _emit_observed(args, report)
 
 
 def cmd_term_candidates(args) -> int:
@@ -202,11 +226,17 @@ def cmd_term_candidates(args) -> int:
 
 
 def cmd_status(args) -> int:
-    return _emit({"ok": True, **batch.status(_ws(args), _scope(args))})
+    ws = _ws(args)
+    if workflow.managed(ws):
+        args.route = workflow.Route(ws)
+        route = {"workflow": args.route.progress()}
+    else:
+        route = {}
+    return _emit({"ok": True, **batch.status(ws, _scope(args)), **route})
 
 
 def cmd_qa(args) -> int:
-    return _emit({"ok": True, **qa.run_qa(_ws(args), _scope(args), args.name)})
+    return _emit_observed(args, {"ok": True, **qa.run_qa(_ws(args), _scope(args), args.name)})
 
 
 def cmd_evidence(args) -> int:
@@ -228,7 +258,10 @@ def cmd_decide(args) -> int:
 
 
 def cmd_gate(args) -> int:
-    result = qa.chapter_gate(_ws(args), _scope(args), args.name)
+    ws = _ws(args)
+    result = qa.chapter_gate(ws, _scope(args), args.name)
+    if workflow.managed(ws):
+        return _emit_observed(args, {"ok": result["verdict"] == "pass", **result})
     return _emit({"ok": result["verdict"] != "empty", **result})
 
 
@@ -248,6 +281,8 @@ def cmd_passport_set(args) -> int:
     problems = bible.rule_problems(rules)
     if problems:
         return _emit({"ok": False, "problems": problems})
+    if getattr(args, "route", None):
+        args.route.check_passport(doc["passport"])
     _write_yaml(_ws(args), "passport.yaml", doc)
     return _emit({"ok": True, "rules": len(rules)})
 
@@ -258,6 +293,43 @@ def cmd_voice_set(args) -> int:
         return _emit({"ok": False, "error": "voice must be a mapping"})
     _write_yaml(_ws(args), "voice.yaml", doc)
     return _emit({"ok": True})
+
+
+def cmd_workflow_start(args) -> int:
+    ws = _ws(args)
+    route = workflow.Route.start(ws, Path(args.source), args.pilot_chapter, args.pilot_scene)
+    return _emit({"ok": True, "workflow": route.progress()})
+
+
+def cmd_workflow_advance(args) -> int:
+    report = _read(args.file) if args.file else {}
+    progress = workflow.Route(_ws(args)).advance(args.step, args.chapter, report)
+    return _emit({"ok": True, "workflow": progress})
+
+
+def cmd_workflow_reopen(args) -> int:
+    progress = workflow.Route(_ws(args)).reopen(args.chapter, args.reason)
+    return _emit({"ok": True, "workflow": progress})
+
+
+def cmd_artifact_check(args) -> int:
+    return _emit({"ok": True, **workflow.Route(_ws(args)).audit_artifact(selftest=args.selftest)})
+
+
+def _run_command(args) -> int:
+    ws = _ws(args)
+    if args.command == "workflow-start":
+        ws.root.mkdir(parents=True, exist_ok=True)
+    if workflow.managed(ws) or args.command.startswith("workflow-"):
+        with ws.lock(".workflow.lock"):
+            if args.command.startswith("workflow-") or args.command == "status":
+                return args.func(args)
+            args.route = workflow.Route(ws)
+            args.route.guard(args)
+            return args.func(args)
+    if args.command != "status" and not (ws.ir / "units.jsonl").is_file():
+        raise workflow.Refusal("initialize a new book with workflow-start", "workflow-start")
+    return args.func(args)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -274,6 +346,21 @@ def main(argv: list[str] | None = None) -> int:
     pages = ("--pages", {})
     chapter = ("--chapter", {"type": int})
     file = ("--file", {"required": True})
+    command(
+        "workflow-start",
+        cmd_workflow_start,
+        ("source", {}),
+        ("--pilot-chapter", {"type": int}),
+        ("--pilot-scene", {"type": int}),
+    )
+    command("workflow-advance", cmd_workflow_advance, ("step", {}), chapter, ("--file", {}))
+    command("artifact-check", cmd_artifact_check, ("--selftest", {"action": "store_true"}))
+    command(
+        "workflow-reopen",
+        cmd_workflow_reopen,
+        ("--chapter", {"type": int, "required": True}),
+        ("--reason", {"required": True}),
+    )
     command("ingest", cmd_ingest, ("pdf", {}), ("--profile", {}))
     command(
         "build",
@@ -331,8 +418,18 @@ def main(argv: list[str] | None = None) -> int:
     command("voice-set", cmd_voice_set, file)
     args = parser.parse_args(argv)
     try:
-        return args.func(args)
-    except (OSError, yaml.YAMLError, bible.BibleError) as error:
+        return _run_command(args)
+    except workflow.Refusal as error:
+        return _emit(error.payload)
+    except (
+        OSError,
+        yaml.YAMLError,
+        bible.BibleError,
+        store.WorkspaceLocked,
+        json.JSONDecodeError,
+        epub.EpubError,
+        BadZipFile,
+    ) as error:
         return _emit({"ok": False, "error": str(error)})
 
 

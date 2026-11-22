@@ -1,6 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
+#     "lxml==6.*",
 #     "pikepdf==10.*",
 #     "pdfplumber==0.11.*",
 #     "pypdfium2==4.*",

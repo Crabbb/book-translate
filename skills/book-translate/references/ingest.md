@@ -2,7 +2,8 @@
 
 ```text
 bt ingest <book.pdf> --work <папка> [--profile <профиль>]
-bt build  <book.pdf> --work <папка> --lang en --name selftest
+bt build  <book.pdf> --work <папка> --lang en --draft --name selftest
+bt artifact-check --work <папка>
 ```
 
 **Требования.** Нужен тегированный PDF и профиль издателя в `profiles/`: соответствие стилей InDesign логическим зонам. Неизвестный стиль или нетегированный файл останавливают разбор; не обходи это, а сообщи владельцу.

@@ -336,6 +336,15 @@ def test_cite_quotes_forms_and_keeps_open_what_has_no_form(ws):
     assert "paraphrases" not in item
 
 
+def test_cite_keeps_a_valid_prefix_for_ellipsis_and_punctuation(ws):
+    sources = {"u-1": ". . . that was changing.", "u-2": ". . . !"}
+    store.write_jsonl(ws.ir / "units.jsonl", [unit(uid, text, 5) for uid, text in sources.items()])
+    report = batch.cite(ws, {"units": [{"id": uid, "tgt": "…"} for uid in sources]})
+    assert report["ok"]
+    for item in report["result"]["units"]:
+        assert batch.echo_matches(item["src_echo"], sources[item["id"]])
+
+
 def test_cite_always_shows_the_rules_of_the_units_in_the_draft(ws):
     ws.bible.mkdir(parents=True, exist_ok=True)
     (ws.bible / "passport.yaml").write_text(

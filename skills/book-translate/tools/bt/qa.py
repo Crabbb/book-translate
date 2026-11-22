@@ -417,6 +417,7 @@ def _expand_evidence(step: str, entries: list[dict]) -> tuple[list[dict], list[d
                     {
                         "unit": uid,
                         "window": window,
+                        "observations": entry["observations"],
                         "findings": [f for f in findings if f.get("unit") == uid],
                     }
                 )
@@ -462,7 +463,11 @@ def record_evidence(ws: Workspace, step: str, entries: list[dict]) -> dict:
                 notes=notes,
             ),
             "findings": entry.get("findings", []),
-            **{k: entry[k] for k in ("en_propositions", "ru_coverage", "window") if k in entry},
+            **{
+                k: entry[k]
+                for k in ("en_propositions", "ru_coverage", "window", "observations")
+                if k in entry
+            },
         }
     if bad:
         return {"ok": False, "problems": bad}

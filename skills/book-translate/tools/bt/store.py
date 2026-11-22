@@ -9,10 +9,16 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 
 import yaml
+
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import fcntl
 
 # Fields that change what a correct translation is (spec 8.5). Everything else is commentary.
 CONCEPT_NORM = (
@@ -42,6 +48,7 @@ PASSPORT_NORM = (
     "modal_map",
     "code_policy",
     "typography",
+    "fiction",
 )
 
 
@@ -88,18 +95,21 @@ class Workspace:
         self.reports = self.root / "reports"
 
     @contextmanager
-    def lock(self):
+    def lock(self, name: str = ".writer.lock"):
         """One writer at a time: a second one fails instead of racing."""
-        path = self.root / ".writer.lock"
-        try:
-            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as error:
-            raise WorkspaceLocked(f"another writer holds {path}") from error
-        try:
+        path = self.root / name
+        with path.open("a+b") as handle:
+            fd = handle.fileno()
+            handle.seek(0)
+            try:
+                if sys.platform == "win32":
+                    msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                else:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as error:
+                raise WorkspaceLocked(f"another writer holds {path}") from error
+            # Closing the descriptor releases the OS lock, including on process exit.
             yield
-        finally:
-            os.close(fd)
-            path.unlink(missing_ok=True)
 
     def units(self) -> list[dict]:
         """The registry, with figure text spliced in after its caption."""
@@ -146,10 +156,13 @@ class Workspace:
                 if not text:
                     problems.append({"id": row["id"], "problem": "has_text needs a transcription"})
                     continue
-                start = position.get(obj.get("after"), -1) + 1
-                caption = next(
-                    (u for u in units[start : start + 3] if u["region"] == "caption"), None
-                )
+                start = position.get(obj.get("after"), -1)
+                if obj.get("epub_asset"):
+                    caption = units[start] if start >= 0 else None
+                else:
+                    caption = next(
+                        (u for u in units[start + 1 : start + 4] if u["region"] == "caption"), None
+                    )
                 if caption is None:
                     problems.append({"id": row["id"], "problem": "no caption to hold the text"})
                     continue
@@ -165,6 +178,9 @@ class Workspace:
                     "src": {"text": text, "hash": digest(text)},
                     "spans": {},
                 }
+                if obj.get("epub_asset"):
+                    entry["unit"]["epub_figure"] = obj["id"]
+                    entry["unit"]["scene"] = caption["scene"]
             current[row["id"]] = entry
         if problems:
             return {"ok": False, "problems": problems}

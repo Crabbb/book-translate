@@ -54,9 +54,9 @@ bt evidence --work <папка> --step check --file check.json
 ## Гейт главы
 
 ```text
-bt qa    --work <папка> --pages ... --name ch01   # отчёт reports/qa-ch01.json
+bt qa    --work <папка> --chapter N --name ch01   # отчёт reports/qa-ch01.json
 bt decide --work <папка> --file decisions.json    # решения по кандидатам
-bt gate  --work <папка> --pages ... --name ch01
+bt gate  --work <папка> --chapter N --name ch01
 ```
 
 Кандидаты класса `C` не являются ошибками: код их находит, ты решаешь. На каждый запись:

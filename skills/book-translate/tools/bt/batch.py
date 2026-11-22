@@ -102,10 +102,20 @@ class Chapters(frozenset):
     """A selection by chapter: chapters share pages, so a page range can catch a neighbour."""
 
 
+class Units(frozenset):
+    """A frozen selection of registry IDs for a pilot."""
+
+
 def _select(units: list[dict], pages: set[int] | None) -> list[dict]:
     wanted = [u for u in units if u["class"] == "translate" and u["region"] in TRANSLATABLE]
     if pages is not None:
-        field = "chapter" if isinstance(pages, Chapters) else "page"
+        field = (
+            "unit_id"
+            if isinstance(pages, Units)
+            else "chapter"
+            if isinstance(pages, Chapters)
+            else "page"
+        )
         wanted = [u for u in wanted if u[field] in pages]
     return wanted
 
@@ -236,6 +246,9 @@ def next_batch(
         **_context(ws, [u["unit_id"] for u in chosen], units, accepted, channels),
         "translate_this": items,
     }
+    fiction = doc.get("passport", {}).get("fiction")
+    if fiction:
+        payload["passport_min"]["fiction"] = fiction
     in_tokens = tokens_estimate(json.dumps(payload, ensure_ascii=False))
     out_tokens = int(tokens_estimate(" ".join(i["src"] for i in items)) * 2.2)
     oversize = in_tokens > max_input_tokens or out_tokens > max_output_tokens
@@ -334,7 +347,11 @@ def cite(ws: Workspace, draft: dict) -> dict:
             unresolved.append({"unit": item.get("id"), "problem": "unknown unit"})
             continue
         regions.add(unit["region"])
-        item["src_echo"] = " ".join(plain(unit["src"]["text"]).split()[:3])
+        source = unit["src"]["text"]
+        echo = " ".join(plain(source).split()[:3])
+        if not echo_matches(echo, source):
+            echo = src_echo(source) or plain(source).strip()
+        item["src_echo"] = echo
         text = plain(item.get("tgt", "")).lower()
         wanted: dict[str, list[dict]] = {}
         for occ in bible_mod.find_occurrences(unit["src"]["text"], concepts):
