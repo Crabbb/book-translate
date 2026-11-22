@@ -1,81 +1,38 @@
 <p align="center">
-  <img src="docs/assets/hero-en.svg" alt="book-translate: source, living glossary and a translation with the same layout" width="100%">
+  <img src="docs/assets/editorial-hero.webp" alt="book-translate. Two open books, a technical manual and a work of fiction" width="100%">
 </p>
 
-<p align="center">
-  <a href="https://github.com/Crabbb/book-translate/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Crabbb/book-translate/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-2a78d6">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-52514e"></a>
-</p>
+[![CI](https://github.com/Crabbb/book-translate/actions/workflows/ci.yml/badge.svg)](https://github.com/Crabbb/book-translate/actions/workflows/ci.yml) · [MIT license](LICENSE) · [Русский](README.md)
 
-<p align="center">
-  <a href="README.md">Русский</a> · <b>English</b>
-</p>
+# Translate books from English into Russian
 
-Anyone can tell a model "translate this book". What comes back is smooth text where terms drift between chapters, the author's recommendations have become orders, and the layout, figures and index are gone.
+**book-translate** is an LLM agent skill and a CLI, `bt`, for translating technical books and fiction. The agent reads the book, records its editorial decisions, then takes each chapter through source comparison, editing and acceptance. Code enforces the sequence and saves progress so work can resume at the expected step.
 
-**book-translate** works like an editorial office, not a prompt. It is a skill for LLM agents (Claude Code, Codex and others) plus a CLI, `bt`. Together they take a technical book or a work of fiction from English to Russian along the path a good publisher uses: preparation, a terminology glossary, translation, checking against the source, editing, independent review, typesetting.
+## One workflow, two editorial approaches
 
-The model is the translator here, not the whole process. Whatever code can check, code checks. Whatever needs understanding, the agent decides, and it records the reason.
+| | Technical books | Fiction |
+|---|---|---|
+| What the agent studies | Terminology, domain relationships, authorial voice, examples and book structure | Characters, chronology, point of view, voices, forms of address and recurring motifs |
+| What the translation preserves | Precise instructions, the distinction between advice and requirements, consistent terms and the meaning of code examples | Distinct dialogue, subtext, rhythm, wordplay and the order in which the story reveals information |
+| How the result is checked | Review terms, numbers, links and examples. For tagged PDFs, check the rebuilt layout | Compare scenes and dialogue to the source. Fiction EPUB uses [nine mandatory acceptance criteria](skills/book-translate/references/fiction-epub-acceptance.md), covering both editorial quality and file structure |
+| Example decision | **Should** in a manual stays a recommendation when the author sets no requirement | A shift between Russian **ты** and **вы** is checked against the characters’ relationship and the whole scene |
 
-## How it differs from "translate this book"
+When a historical detail, form of address or cultural reference affects meaning, the agent consults sources and records its decision. In a technical book, changing a term flags the affected passages for review. [Fiction guidance](skills/book-translate/references/fiction.md) · [Glossary and decision rules](skills/book-translate/references/bible.md)
 
-| | Prompt in a chat | Machine translation of a file | **book-translate** |
-|---|---|---|---|
-| One terminology across the book | no | manual glossary | **living glossary with reasons and case forms** |
-| Context and the author's voice | within a window | within a phrase | **reads the whole book before translating** |
-| Nothing lost, nothing invented | can't verify | can't verify | **accounts for every PDF glyph or translatable EPUB node** |
-| Layout, tables, links, index | lost | partly | **rebuilt in the same design** |
-| Text inside figures | stays English | stays English | **translated under the caption** |
-| Prompts and code in books about LLMs | may run as instructions | break | **code untouched, prompt kept next to its translation** |
-| Check against the source | just a claim | none | **for every paragraph, with evidence** |
-| Independent review | none | none | **another model, with no access to the translator's reasoning** |
-| Dropped session | start over | start over | **resumes from the same place** |
+## Code enforces the required stages
 
-## The main danger of LLM translation: errors sound confident
+![Four stages with checkpoints between them. Read the book, set the plan and goal, translate and edit, then deliver the finished book](docs/assets/editorial-workflow.webp)
 
-Output from a large model reads smoothly. A meaning error looks as convincing as a correct sentence, and you cannot see it by reading only the Russian:
+1. **Study the book.** The agent records the brief, ingests the source, checks a draft English build, reads the full translation scope and prepares the glossary.
+2. **Set criteria and a goal.** The agent ties the book's acceptance criteria to specific passages and risks, then creates and confirms an active goal in the host.
+3. **Translate and edit.** The CLI opens translation batches after preparation. Each chapter goes through translation, source comparison, editing, reading in Russian and a recheck.
+4. **Accept the result.** The CLI checks that the review covers the plan, that evidence is current and that the required reports are present. The finished book is checked after it is built.
 
-| Source | Smooth translation | What broke | Correct |
-|---|---|---|---|
-| `sensitive data` | важные данные ("important data") | The protected category changed | чувствительные данные |
-| `should` | должен ("must") | A recommendation became an obligation | следует |
-| `protecting against` X | защита X ("protecting X") | The direction of protection flipped | защита от X |
-| `tamper-evident` | защищённый от подделки ("tamper-proof") | Detection became prevention | позволяющий обнаружить вмешательство |
-| `intractable` | неразрешимый ("unsolvable") | A resource limit became an impossibility | практически не поддающийся решению |
-| `performance` about speed | результативность ("effectiveness") | Promises quality instead of speed | производительность |
-
-Asking a model to "translate more accurately" does not fix this. A process does, where each kind of error has a layer that catches it.
-
-## Four layers of control
-
-<p align="center"><img src="docs/assets/layers-en.svg" alt="Four layers: code checks facts, source check compares with the original, reading catches unnatural Russian, an independent judge finds what the translator cannot see in its own work" width="100%"></p>
-
-A translator systematically misses its own errors, and that holds for a model as it does for a person. So the last layer is kept apart from the others: the judge sees only the source and the translation. It gives a diagnosis, and its findings become rules for the next chapter, so the process learns from the book itself.
-
-## How a book goes through
-
-The agent reads the entire book and prepares a glossary. For fiction it records chronology, characters, points of view, voices and forms of address. It consults sources when historical or cultural references affect meaning.
-
-The agent then writes the book's plan and acceptance criteria, creates an active goal in the host and reads it back. The [managed workflow](skills/book-translate/references/workflow.md) opens translation only after these steps. Final acceptance for fiction EPUB requires [AC-01–AC-09](skills/book-translate/references/fiction-epub-acceptance.md). State is saved on disk.
-
-## A living glossary, not a list at the front
-
-<p align="center"><img src="docs/assets/bible-en.svg" alt="A glossary record and a chain: the decision changes, units become stale, evidence is voided, the agent fixes each one" width="100%"></p>
-
-Only this book's glossary defines a term. If a decision changes on page 200, code finds every affected place. The translator does not have to remember what was decided in chapter one.
-
-## Also built in
-
-- **The author's voice.** A passport and voice profile fix how the reader is addressed, the authorial "we", and the strength of modal verbs.
-- **No LLM stock phrases.** Rules catch the bureaucratese, clichés and calques that give machine text away.
-- **Book text is always data.** Instructions inside a book about LLMs are never executed.
-- **Nothing leaves on its own.** The CLI works locally: the book and translation stay in your working folder.
-- **An honest summary.** The skill never reports "no errors": it states coverage and what was not checked.
+When evidence for a required step is missing or stale, `bt` blocks the next one. `bt status` shows where to resume, even in a new session. Code checks order, coverage and hashes. Editorial review evaluates meaning, voice and the quality of the Russian prose. [Workflow and transition rules](skills/book-translate/references/workflow.md)
 
 ## Quick start
 
-Install [uv](https://docs.astral.sh/uv/) and use an agent whose host provides `create_goal` and `get_goal`.
+Install [uv](https://docs.astral.sh/uv/) and open the repository in an agent whose host provides `create_goal` and `get_goal`.
 
 ```bash
 git clone https://github.com/Crabbb/book-translate.git
@@ -83,42 +40,20 @@ cd book-translate
 uv sync --locked
 ```
 
-Open the repository in the agent and ask:
-
 > Translate `book.epub` from English into Russian using `skills/book-translate/SKILL.md`. Use `work/mybook` as the working folder.
 
-You can also start the CLI workflow and inspect its state:
+To inspect an existing book workflow:
 
 ```bash
-uv run --locked bt workflow-start book.epub --work work/mybook
 uv run --locked bt status --work work/mybook
 ```
 
-The skill's procedures are written in Russian, its target language.
+- **Reflowable EPUB 3.** Point `BT_EPUBCHECK` at a local EPUBCheck installation to validate the build. To try one scene, use `workflow-start` with `--pilot-chapter N --pilot-scene M`. [EPUB guide](skills/book-translate/references/epub.md)
+- **Tagged PDF.** Building a PDF requires a layout profile, Typst and fonts. Use `BT_TYPST` and `BT_FONTS` to set the paths. [PDF build guide](skills/book-translate/references/build.md)
+- **Host tools and review.** If the host lacks goal tools, the workflow pauses at `goal` and saves the preparation. An additional agent is needed for independent review. [Independent review](skills/book-translate/references/judge-optional.md)
 
-## What to know up front
-
-- For reflowable EPUB 3, set `BT_EPUBCHECK` to a local EPUBCheck executable or JAR. Add `--pilot-chapter N --pilot-scene M` to `workflow-start` to try one scene. [EPUB details](skills/book-translate/references/epub.md)
-- Tagged PDF requires a layout profile, Typst and fonts. Set the paths with `BT_TYPST` and `BT_FONTS`. [PDF build](skills/book-translate/references/build.md)
-- If the host lacks goal tools, the workflow pauses at `goal` with preparation saved. Independent review requires a separate agent.
-
-## What's inside
-
-```text
-skills/book-translate/
-├── SKILL.md            route: 13 steps and when to stop
-├── references/         the procedure for each step
-├── rules/style.yaml    LLM stock phrases, bureaucratese, typography
-├── profiles/           a publisher layout profile
-├── templates/book.typ  the build template
-├── bt.py               runs the CLI from any folder
-└── tools/bt/           ingest, bible, qa, cite, gate, typeset, artifact
-```
-
-## Copyright
-
-This repository contains only the tool, with no books or translations. You are responsible for your right to translate and distribute a given book.
+[Open the skill instructions in Russian](skills/book-translate/SKILL.md)
 
 ## License
 
-[MIT](LICENSE)
+The code is distributed under the [MIT License](LICENSE). Book sources and translations stay in your working directory. You are responsible for the rights to translate or distribute a specific edition.
