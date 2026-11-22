@@ -30,6 +30,16 @@ When a historical detail, form of address or cultural reference affects meaning,
 
 When evidence for a required step is missing or stale, `bt` blocks the next one. `bt status` shows where to resume, even in a new session. Code checks order, coverage and hashes. Editorial review evaluates meaning, voice and the quality of the Russian prose. [Workflow and transition rules](skills/book-translate/references/workflow.md)
 
+## Interactive diagrams
+
+The diagrams are in Russian. The first shows the book workflow and where the two editorial approaches fit. The second shows how the CLI checks a requested step, rejects invalid transitions and saves confirmed progress.
+
+[![Book workflow from source through editorial preparation, chapter reviews and final acceptance](docs/diagrams/book-route.svg)](docs/diagrams/book-route.html)
+
+[![How bt checks the expected step and evidence, blocks invalid actions and saves progress](docs/diagrams/step-check.svg)](docs/diagrams/step-check.html)
+
+Open either diagram file, choose **Download raw file**, then open the HTML in your browser. Interactive nodes link to the corresponding lines in the public repository.
+
 ## Quick start
 
 Install [uv](https://docs.astral.sh/uv/) and open the repository in an agent whose host provides `create_goal` and `get_goal`.
